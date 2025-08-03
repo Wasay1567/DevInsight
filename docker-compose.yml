@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  db:
+    image: mongo:8
+    ports:
+    - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - devinsight
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: test
+    restart: always
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+
+  server:
+    build:
+      context: ./server
+    expose:
+      - "5000"
+    networks:
+      - devinsight
+    depends_on:
+      - db
+    env_file:
+      - ./server/.env
+    restart: always
+  
+  client:
+    build: 
+      context: ./client
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+      - db
+    networks:
+      - devinsight
+    restart: always
+    
+
+
+networks:
+  devinsight:
+      
+volumes:
+  mongo_data:

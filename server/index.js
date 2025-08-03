@@ -11,21 +11,40 @@ const { generalRateLimit } = require("./middleware/rateLimiter");
 const { errorHandler } = require("./src/utils/errorUtils"); // Import error handler
 
 // CORS configuration
-const corsOptions = {
-  origin: [
-    process.env.FRONTEND_URL || "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:4173",
-  ],
-  credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-};
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     // Allow requests with no origin (like mobile apps, curl, etc.)
+//     if (!origin) return callback(null, true);
+
+//     // Allow localhost and Codespaces URLs
+//     const allowed = [
+//       "http://localhost",
+//       "http://localhost:80",
+//       "http://localhost:3000",
+//       "http://localhost:5000",
+//       "http://localhost:5173",
+//       "http://localhost:5174",
+//       "http://localhost:4173",
+//       process.env.FRONTEND_URL,
+//     ].filter(Boolean);
+
+//     // Allow *.app.github.dev for Codespaces
+//     const githubDevRegex = /^https:\/\/.*\.app\.github\.dev$/;
+
+//     if (allowed.includes(origin) || githubDevRegex.test(origin)) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error("Not allowed by CORS: " + origin));
+//     }
+//   },
+//   credentials: true,
+//   optionsSuccessStatus: 200,
+//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+// };
 
 // Middleware
-app.use(cors(corsOptions));
+// app.use(cors(corsOptions)); Not using the CORS as we are not serving the backend publically we are just exposing port inside the nginx. So only nginx can make requests to this port
 app.use(express.json());
 app.use(generalRateLimit);
 
@@ -39,12 +58,16 @@ const connectDB = async () => {
     );
 
     const conn = await mongoose.connect(process.env.MONGO_URI, {
-      dbName: "devinsight", // Force the database name
+      dbName: "devinsight",
     });
 
-    console.log(`✅ MongoDB connected successfully!`);
-    console.log(`📊 Database: ${conn.connection.db.databaseName}`);
-    console.log(`🌐 Host: ${conn.connection.host}`);
+    if (conn.connection) {
+      console.log(`✅ MongoDB connected successfully!`);
+      console.log(`📊 Database: ${conn.connection.db.databaseName}`);
+      console.log(`🌐 Host: ${conn.connection.host}`);
+    } else {
+      console.log("⚠️  Connected, but connection object is missing details.");
+    }
 
     return true;
   } catch (error) {
@@ -55,7 +78,7 @@ const connectDB = async () => {
 };
 
 // Connect to database
-connectDB();
+// connectDB();
 
 // Routes
 app.use("/api/analyze", require("./routes/analyze"));
@@ -79,7 +102,10 @@ app.use(errorHandler);
 
 // Start server
 connectDB()
-  .then(() => {
+  .then((connected) => {
+    if (!connected) {
+      console.warn("⚠️  Starting server without database connection.");
+    }
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🌐 API available at: http://localhost:${PORT}`);

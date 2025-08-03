@@ -58,7 +58,8 @@ const AnalyzeRepo = () => {
     const progressInterval = simulateProgress();
 
     try {
-      const response = await axios.post('http://localhost:5000/api/analyze', {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api';
+      const response = await axios.post(`${apiUrl}/analyze`, {
         repoUrl: repoUrl.trim()
       });
 
