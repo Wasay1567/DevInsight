@@ -14,14 +14,14 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: test
     restart: always
     healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      test: echo 'db.runCommand({serverStatus:1}).ok' | mongo admin -u root -p test --quiet | grep 1
       interval: 10s
-      timeout: 30s
+      timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 20s
 
   server:
-    build:
+    build: 
       context: ./server
     expose:
       - "5000"
@@ -37,13 +37,19 @@ services:
     build: 
       context: ./client
     ports:
-      - "80:80"
+      - "3000:80"
     depends_on:
       - server
       - db
     networks:
       - devinsight
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://server:5000/api/analyze/test"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 20s 
     
 
 
