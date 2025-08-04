@@ -72,6 +72,71 @@ Access at: `http://localhost:5173`
 **Frontend:** React 18, Vite, Ant Design, Tailwind CSS  
 **Backend:** Node.js, Express.js, MongoDB Atlas  
 **APIs:** GitHub REST API, npm Registry
+**Containerization:** Docker, Docker compose
+**Reverse Proxy:** Nginx
+
+## 🚀 Docker & NGINX Integration
+
+This fork adds Docker containerization and an NGINX reverse proxy for production-ready deployment.
+
+### 📦 How to Run with Docker
+
+1. Build and start containers:
+   ```bash
+   docker-compose up --build
+   ```
+    Access the app:
+
+        Frontend: http://localhost:3000
+
+        Backend: Exposed internally to NGINX, no direct local access.
+
+⚙️ System Architecture
+```mermaid
+graph TD;
+    A[Browser] -->|HTTP Requests| B[NGINX]
+    B -->|Static Files| C[React App]
+    B -->|API Calls| D[Backend Server]
+    D -->|Database Queries| E[MongoDB]
+    E -->|Data| D
+    D -->|Data| B
+    C -->|Data| B
+```
+    Browser → NGINX → Backend
+    NGINX handles static React files at / and proxies API calls at /api/* to the backend service.
+
+Benefits of this architecture:
+- **Scalability**: Each component can be scaled independently.
+- **Separation of Concerns**: Clear separation between frontend, backend, and database.
+
+Benefits of using nginx reverse proxy:
+- **Performance**: NGINX serves static files efficiently, reducing load on the backend.
+- **Security**: NGINX can handle SSL termination and protect backend services from exposing them publically.
+
+### Issues Resolved while containerization and nginx config
+1) Nginx can't forward the proxy to backend
+STEPS TO RESOLVE THE ISSUE:
+--> Checked the logs of server container
+```bash
+docker compose logs server
+```
+--> Executing the curl request to backend inside the nginx container by exec it in interactive environment in shell  
+```bash
+docker exec -it <container_id_of_client> sh
+curl http://server:5000/api/analyze/test
+```
+--> Sending the fake request to backend from local frontend served using nginx
+--> Check the logs of client container
+```bash
+docker compose logs client
+```
+--> Noticed the relative path error nginx was trying to forward the request on http://server:5000/analyze which is incorrect path.
+--> Change the proxy_pass in nginx config to use /api/analyze
+
+2) server can't establish connection with mongodb
+--> checked the mongodb_uri (used the service name instead of hardcoded ip)
+--> Server was trying to connect to devinsight database which is not the database in which admin credential were stored.
+--> changed the mongo db uri to use query 'authsource=admin'
 
 ##  API Usage
 
